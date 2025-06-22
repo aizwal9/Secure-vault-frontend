@@ -6,3 +6,10 @@ export interface File {
   uploaded_at: string;
   file: string;
 } 
+
+export interface PaginatedFileResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: File[];
+}

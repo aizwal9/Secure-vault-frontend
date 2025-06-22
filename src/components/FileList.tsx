@@ -1,17 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { fileService } from '../services/fileService';
 import { File as FileType } from '../types/file';
 import { DocumentIcon, TrashIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 export const FileList: React.FC = () => {
+  const [fileType, setFileType] = useState('');
+  const [minSize, setMinSize] = useState('');
+  const [maxSize, setMaxSize] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  
+
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
 
-  // Query for fetching files
-  const { data: files, isLoading, error } = useQuery({
-    queryKey: ['files'],
-    queryFn: fileService.getFiles,
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['files', search, page],
+    queryFn: () => fileService.getFiles(search, page),
+    // keepPreviousData: true,
   });
+
+  const files = data?.results || [];
+  const total = data?.count || 0;
+  const totalPages = Math.ceil(total / 10);
 
   // Mutation for deleting files
   const deleteMutation = useMutation({
@@ -87,58 +101,89 @@ export const FileList: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">Uploaded Files</h2>
-      {!files || files.length === 0 ? (
-        <div className="text-center py-12">
-          <DocumentIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No files</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Get started by uploading a file
-          </p>
-        </div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-gray-900">Uploaded Files</h2>
+        <input
+          type="text"
+          placeholder="Search files..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              setSearch(searchInput);
+              setPage(1); // Reset to first page when new search is submitted
+            }
+          }}
+          className="border border-gray-300 px-3 py-2 rounded-md text-sm w-64"
+        />
+      </div>
+
+      {isLoading ? (
+        <p>Loading...</p>
+      ) : error ? (
+        <div className="text-red-600">Failed to load files.</div>
+      ) : files.length === 0 ? (
+        <div className="text-gray-500 text-center py-8">No files found.</div>
       ) : (
-        <div className="mt-6 flow-root">
+        <>
           <ul className="-my-5 divide-y divide-gray-200">
-            {files.map((file) => (
-              <li key={file.id} className="py-4">
-                <div className="flex items-center space-x-4">
-                  <div className="flex-shrink-0">
-                    <DocumentIcon className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {file.original_filename}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {file.file_type} • {(file.size / 1024).toFixed(2)} KB
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Uploaded {new Date(file.uploaded_at).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleDownload(file.file, file.original_filename)}
-                      disabled={downloadMutation.isPending}
-                      className="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                      <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
-                      Download
-                    </button>
-                    <button
-                      onClick={() => handleDelete(file.id)}
-                      disabled={deleteMutation.isPending}
-                      className="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                    >
-                      <TrashIcon className="h-4 w-4 mr-1" />
-                      Delete
-                    </button>
-                  </div>
+            {files.map((file: FileType) => (
+              <li key={file.id} className="py-4 flex items-center space-x-4">
+                <DocumentIcon className="h-8 w-8 text-gray-400" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {file.original_filename}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {file.file_type} • {(file.size / 1024).toFixed(2)} KB
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Uploaded {new Date(file.uploaded_at).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleDownload(file.file, file.original_filename)}
+                    disabled={downloadMutation.isPending}
+                    className="text-sm bg-primary-600 hover:bg-primary-700 text-white px-3 py-1 rounded"
+                  >
+                    <ArrowDownTrayIcon className="h-4 w-4 inline mr-1" />
+                    Download
+                  </button>
+                  <button
+                    onClick={() => handleDelete(file.id)}
+                    disabled={deleteMutation.isPending}
+                    className="text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                  >
+                    <TrashIcon className="h-4 w-4 inline mr-1" />
+                    Delete
+                  </button>
                 </div>
               </li>
             ))}
           </ul>
-        </div>
+
+          {/* Pagination */}
+          <div className="flex justify-between items-center mt-4">
+            <button
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              disabled={page === 1}
+              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-gray-600">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+              disabled={page === totalPages}
+              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

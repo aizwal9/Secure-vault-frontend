@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { File as FileType } from '../types/file';
+import { File as FileType, PaginatedFileResponse } from '../types/file';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
@@ -16,9 +16,26 @@ export const fileService = {
     return response.data;
   },
 
-  async getFiles(): Promise<FileType[]> {
-    const response = await axios.get(`${API_URL}/files/`);
-    return response.data;
+  // getFiles: async (search: string, page: number) => {
+  //   const params = new URLSearchParams();
+  //   if (search) params.append('search', search);
+  //   params.append('page', page.toString());
+  //   const response = await fetch(`/api/files/?${params.toString()}`);
+  //   console.log(response.json());
+  //   return await response.json(); // must return { results: [...], count: N }
+  // },
+
+  // Fetch files with search and pagination
+  getFiles: async (search: string, page: number): Promise<PaginatedFileResponse> => {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    params.append('page', page.toString());
+
+    const res = await fetch(`${API_URL}/files/?${params.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch files');
+    const data = await res.json();   // ✅ parse it here
+    console.log('✅ Parsed file data:', data);  // ✅ this shows the real shape
+    return data; // returns full { count, results, next, previous }
   },
 
   async deleteFile(id: string): Promise<void> {
