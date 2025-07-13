@@ -1,6 +1,8 @@
-# Security - File Hub
+# Secure File Hub
 
 A React-based file management system for uploading, listing, downloading, and deleting files. Built with TypeScript, Tailwind CSS, and React Query.
+
+![](https://github.com/aizwal9/Secure-vault-frontend/blob/main/image.png?raw=true)
 
 ## Features
 
